@@ -14,6 +14,9 @@ connectDB();
 
 const app = express();
 
+app.use(express.json()); // Allows the server to read JSON from req.body
+app.use(express.urlencoded({ extended: true })); // Allows URL-encoded data
+
 // Middleware
 app.use(express.json());
 
