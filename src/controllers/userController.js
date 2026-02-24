@@ -5,7 +5,7 @@ import generateToken from '../utils/generateToken.js';
 // @desc    Register a new user
 // @route   POST /api/users
 export const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password ,isAdmin } = req.body;
 
   const userExists = await User.findOne({ email });
 
@@ -14,7 +14,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     throw new Error('User already exists');
   }
 
-  const user = await User.create({ name, email, password });
+  const user = await User.create({ name, email, password , isAdmin});
 
   if (user) {
     res.status(201).json({
