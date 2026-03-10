@@ -1,46 +1,62 @@
 import mongoose from "mongoose";
 
-const productSchema = new mongoose.Schema({
-    name:{
-        type:String,
-        required:[true, "Product name is required"],
-        trim:true
+const reviewSchema = mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    rating: { type: Number, required: true },
+    comment: { type: String, required: true },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: 'User', // Links the review to a specific user
     },
-    description:{
-        type:String
+  },
+  {
+    timestamps: true,
+  }
+);
+
+const productSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: [true, "Product name is required"],
+      trim: true,
     },
-    price:{
-        type: Number,
-        required: [true, "Product price is required"]
+    description: {
+      type: String,
     },
-    category:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:'Category',
-        required: [true, "Product must belong to a category"]
+    price: {
+      type: Number,
+      required: [true, "Product price is required"],
     },
-    brand:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:'Brand',
-        required: [true, "Product must belong to a brand"]
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: [true, "Product must belong to a category"],
     },
-    stock:{
-        type:Number,
-        required: [true, "Stock quantity is required"],
-        default:0
+    brand: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Brand",
+      required: [true, "Product must belong to a brand"],
+    },
+    stock: {
+      type: Number,
+      required: [true, "Stock quantity is required"],
+      default: 0,
     },
     images: [
-        {
-            public_id: { type: String, required: true },
-            url: { type: String, required: true }
-        }
+      {
+        public_id: { type: String, required: true },
+        url: { type: String, required: true },
+      },
     ],
-    ratings: {
-        type: Number,
-        default: 0
-    }
+    reviews: [reviewSchema], // Ensure this is an array
+    rating: { type: Number, required: true, default: 0 },
+    numReviews: { type: Number, required: true, default: 0 },
+  },
+  { timestamps: true },
+);
 
-},{timestamps:true});
-
-
-const Products = mongoose.model('Products',productSchema);
+const Products = mongoose.model("Products", productSchema);
 export default Products;

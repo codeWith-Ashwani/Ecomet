@@ -149,6 +149,11 @@ export const createProductReview = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
 
   if (product) {
+    // SAFETY CHECK: If reviews array doesn't exist in DB yet, initialize it
+    if (!product.reviews) {
+      product.reviews = [];
+    }
+
     // 1. Check if user already submitted a review
     const alreadyReviewed = product.reviews.find(
       (r) => r.user.toString() === req.user._id.toString()
@@ -174,6 +179,7 @@ export const createProductReview = asyncHandler(async (req, res) => {
     product.numReviews = product.reviews.length;
 
     // 5. Calculate Average Rating
+    // Use the new length to avoid division by zero errors
     product.rating =
       product.reviews.reduce((acc, item) => item.rating + acc, 0) /
       product.reviews.length;
