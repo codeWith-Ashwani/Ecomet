@@ -14,14 +14,6 @@ import {
 } from '../controllers/userController.js';
 import { protect,admin } from '../middlewares/authMiddleware.js';
 
-// Get all users (Admin only)
-router.route('/').get(protect, admin, getUsers);
-
-// Delete, Get single, or Update a specific user (Admin only)
-router.route('/:id')
-  .delete(protect, admin, deleteUser)
-  .get(protect, admin, getUserById)
-  .put(protect, admin, updateUser);
 
 
 // Public routes
@@ -33,5 +25,16 @@ router.post('/logout', logoutUser);
 router.route('/profile')
     .get(protect, getUserProfile)    // Get current user's data
     .put(protect, updateUserProfile); // Update name, email, or password
+
+
+// Get all users (Admin only)
+router.route('/').get(protect, admin, getUsers);
+
+// Delete, Get single, or Update a specific user (Admin only)
+router.route('/:id')
+  .delete(protect, admin, deleteUser)
+  .get(protect, admin, getUserById)
+  .put(protect, admin, updateUser);
+
 
 export default router;
