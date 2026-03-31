@@ -58,3 +58,11 @@ export const getAllCategories = async (req, res) => {
         });
     }
 };
+
+// export const getSubCategories = async (req, res) => {
+//   const subCategories = await Category.find({
+//     parentId: req.params.parentId,
+//   });
+
+//   res.json(subCategories);
+// };

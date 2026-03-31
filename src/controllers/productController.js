@@ -1,40 +1,127 @@
 import Product from "../models/productModel.js";
+import slugify from "slugify";
+import mongoose from "mongoose";
 
 //createProduct
 export const createProduct = async (req, res) => {
-    try{
-        const {
-            name,
-            description,
-            price,
-            category,
-            brand,
-            stock,
-            images,
-            ratings,
-        } = req.body;
-        
-        if(!name || !description || !price || !category || !brand || !stock || !images || !ratings){
-            throw new Error("Please fill complete data");
+    try {
+        const products = req.body;
+
+        if (!Array.isArray(products) || products.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide an array of products"
+            });
         }
 
-        const product = await Product.create({
-            name,
-            description,
-            price,
-            category,
-            brand,
-            stock,
-            images,
-            ratings,
+        // Validate required fields
+        const invalidProduct = products.find(
+            (p) =>
+                !p.name ||
+                !p.description ||
+                !p.price ||
+                !p.category ||
+                !p.brand ||
+                !p.stock ||
+                !p.images ||
+                p.ratings === undefined
+        );
+
+        if (invalidProduct) {
+            return res.status(400).json({
+                success: false,
+                message: "Each product must contain all required fields"
+            });
+        }
+
+        // Insert products
+        const insertedProducts = await Product.insertMany(products);
+
+        // Optional clean response
+        const productList = insertedProducts.map((product) => ({
+            productId: product._id,
+            productName: product.name
+        }));
+
+        res.status(201).json({
+            success: true,
+            message: "Products created successfully",
+            products: productList
         });
 
-        res.status(201).json({ success: true, message:"Products created Successfully" , product });
-
-    }catch(err){
+    } catch (err) {
         res.status(500).json({
-        success: false,
-        message: err.message || "Server error",
+            success: false,
+            message: err.message || "Server error"
+        });
+    }
+};
+
+//createMultipleProduct
+export const createMultipleProduct = async (req, res) => {
+    try {
+        const products = req.body;
+
+        // 1. Check array
+        if (!Array.isArray(products) || products.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide an array of products"
+            });
+        }
+
+        // 2. Validate each product
+        for (let i = 0; i < products.length; i++) {
+            const p = products[i];
+
+            if (
+                !p.name ||
+                !p.description ||
+                p.price === undefined ||
+                !p.category ||
+                p.stock === undefined ||
+                !Array.isArray(p.images) ||
+                p.images.length === 0
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid product at index ${i}`
+                });
+            }
+
+            // 3. Generate slug if not provided
+            const baseSlug = slugify(p.name, { lower: true });
+            const uniqueSlug = `${baseSlug}-${Date.now()}-${i}`;
+            p.slug = uniqueSlug;
+
+            // 4. Default values
+            p.ratings = p.ratings || 0;
+            p.numOfReviews = p.numOfReviews || 0;
+            p.isActive = p.isActive ?? true;
+            p.discount = p.discount || 0;
+        }
+
+        // 5. Insert into DB
+        const insertedProducts = await Product.insertMany(products, {
+            ordered: false // continue even if some fail
+        });
+
+        // 6. Clean response
+        const productList = insertedProducts.map((product) => ({
+            productId: product._id,
+            productName: product.name
+        }));
+
+        return res.status(201).json({
+            success: true,
+            message: `${insertedProducts.length} products created successfully`,
+            products: productList
+        });
+
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            message: err.message || "Server error"
         });
     }
 };
@@ -46,32 +133,43 @@ export const getAllProducts = async (req, res) => {
 };
 
 //getProductById
-export const getProductById = async (req,res)=>{
-    try{
-        const {id}=req.params;
-        const product = await Product.findById(id).populate("category brand");
 
+export const getProductById = async (req, res) => {
+  try {
+    const { id } = req.params;
 
-        if (!product) {
-            return res.status(404).json({
-                success: false,
-                message: "Product not found",
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            product,
-        });
-
-    }catch(err){
-        res.status(400).json({
+    // ✅ Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
         success: false,
-        message: "Invalid product ID",
-        });
+        message: "Invalid product ID format",
+      });
     }
-}
 
+    const product = await Product.findById(id).populate("category");
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    // ✅ Keep response consistent with frontend
+    res.status(200).json({
+      success: true,
+      data: product,
+    });
+
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
 //updateProduct
 export const updateProduct = async (req, res) => {
   try {
@@ -135,6 +233,42 @@ export const deleteProduct = async (req, res) => {
     res.status(400).json({
       success: false,
       message: "Invalid product ID",
+    });
+  }
+};
+
+// get product related to particular sub-categories
+export const getSubCategoryProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Sub-category ID is required",
+      });
+    }
+
+    // find all products with parentId = sub-category id
+    const products = await Product.find({ category: id });
+
+    if (!products || products.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No products found for this sub-category",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Products fetched successfully",
+      data: products,
+    });
+  } catch (err) {
+    console.error("Error fetching sub-category products:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching products",
     });
   }
 };
