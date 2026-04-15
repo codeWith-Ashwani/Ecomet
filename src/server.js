@@ -1,5 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
+import cors from "cors";
+
 import connectDB from './config/db.js';
 
 import userRoutes from './routes/userRoutes.js';
@@ -13,8 +15,11 @@ import { notFound, errorHandler } from './middlewares/errorMiddleware.js';
 dotenv.config();
 connectDB();
 
+
+
 const app = express();
 
+app.use(cors());
 app.use(express.json()); // Allows the server to read JSON from req.body
 app.use(express.urlencoded({ extended: true })); // Allows URL-encoded data
 
