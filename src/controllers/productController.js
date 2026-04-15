@@ -133,7 +133,6 @@ export const getAllProducts = async (req, res) => {
 };
 
 //getProductById
-
 export const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -170,6 +169,7 @@ export const getProductById = async (req, res) => {
     });
   }
 };
+
 //updateProduct
 export const updateProduct = async (req, res) => {
   try {
