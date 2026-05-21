@@ -19,8 +19,15 @@ const categorySchema = new mongoose.Schema({
     },
     description:{
         type:String,
-    }
+    },
+    images: [
+        {
+            public_id: String,
+            url: String
+        }
+    ],
 },{timestamps:true});
 
 const Category =  mongoose.model('Category',categorySchema);
 export default Category;
+

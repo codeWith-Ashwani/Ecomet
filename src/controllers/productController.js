@@ -1,6 +1,7 @@
 import Product from "../models/productModel.js";
 import slugify from "slugify";
 import mongoose from "mongoose";
+import Category from "../models/categoryModel.js";
 
 //createProduct
 export const createProduct = async (req, res) => {
@@ -21,7 +22,7 @@ export const createProduct = async (req, res) => {
                 !p.description ||
                 !p.price ||
                 !p.category ||
-                !p.brand ||
+                // !p.brand ||
                 !p.stock ||
                 !p.images ||
                 p.ratings === undefined
@@ -128,7 +129,7 @@ export const createMultipleProduct = async (req, res) => {
 
 //getAllProducts
 export const getAllProducts = async (req, res) => {
-    const products = await Product.find().populate('category brand');
+    const products = await Product.find().populate('category');
     res.status(200).json({ success: true, products });
 };
 
@@ -170,6 +171,60 @@ export const getProductById = async (req, res) => {
   }
 };
 
+export const getProductsByCategory = async (req, res) => {
+
+  try {
+
+    const { categoryId } = req.params;
+
+    // FIND SUBCATEGORIES
+    const subCategories =
+      await Category.find({
+        parentId: categoryId
+      });
+
+    console.log(subCategories);
+
+    const subCategoryIds =
+      subCategories.map(
+        (cat) => cat._id
+      );
+
+
+
+    // RANDOM PRODUCTS
+    const products =
+      await Product.aggregate([
+        {
+          $match: {
+            category: {
+              $in: subCategoryIds
+            }
+          }
+        },
+        {
+          $sample: {
+            size: 20
+          }
+        }
+      ]);
+
+
+    res.status(200).json({
+      success: true,
+      products
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+
+  }
+};
+
 //updateProduct
 export const updateProduct = async (req, res) => {
   try {
@@ -188,7 +243,7 @@ export const updateProduct = async (req, res) => {
     product.description = req.body.description ?? product.description;
     product.price = req.body.price ?? product.price;
     product.category = req.body.category ?? product.category;
-    product.brand = req.body.brand ?? product.brand;
+    // product.brand = req.body.brand ?? product.brand;
     product.stock = req.body.stock ?? product.stock;
     product.images = req.body.images ?? product.images;
     product.ratings = req.body.ratings ?? product.ratings;
@@ -206,6 +261,45 @@ export const updateProduct = async (req, res) => {
       message: "Invalid product ID",
     });
   }
+};
+
+// addProductProperties
+export const addProductProperties = async (req, res) => {
+
+  try {
+
+    const { id } = req.params;
+    const {tags } = req.body;
+
+    const product = await Product.findById(id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    // update only provided fields
+    product.tags = tags ?? product.tags;
+
+    const updatedProduct = await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Product properties updated successfully",
+      product: updatedProduct,
+    });
+
+  } catch (err) {
+
+    res.status(400).json({
+      success: false,
+      message: "Invalid product ID",
+    });
+
+  }
+
 };
 
 
@@ -270,5 +364,51 @@ export const getSubCategoryProduct = async (req, res) => {
       success: false,
       message: "Server error while fetching products",
     });
+  }
+};
+
+export const searchProducts = async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    const results = await Product.aggregate([
+      {
+        $search: {
+          index: "default",
+          compound: {
+            should: [
+              {
+                autocomplete: {
+                  query: q,
+                  path: "name",
+                  fuzzy: { maxEdits: 2 }
+                }
+              },
+              {
+                text: {
+                  query: q,
+                  path: "tags"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        $limit: 10
+      },
+      {
+        $project: {
+          name: 1,
+          price: 1,
+          images: 1,
+          score: { $meta: "searchScore" }
+        }
+      }
+    ]);
+
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };

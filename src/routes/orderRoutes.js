@@ -1,27 +1,95 @@
-import express from 'express';
+// routes/orderRoutes.js
+
+import express from "express";
+
 const router = express.Router();
-import { addOrderItems, getMyOrders } from '../controllers/orderController.js';
-import { protect } from '../middlewares/authMiddleware.js';
-import crypto from "crypto";
 
-router.route('/').post(protect, addOrderItems);
-router.route('/myorders').get(protect, getMyOrders); 
+import {
+  createOrder,
 
-router.post("/verify", (req, res) => {
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+  getMyOrders,
 
-  const body = razorpay_order_id + "|" + razorpay_payment_id;
+  getOrderById,
 
-  const expectedSignature = crypto
-    .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-    .update(body.toString())
-    .digest("hex");
+  updateOrderToPaid,
 
-  if (expectedSignature === razorpay_signature) {
-    res.json({ success: true });
-  } else {
-    res.status(400).json({ success: false });
-  }
-});
+  updateOrderToDelivered,
+
+  cancelOrder,
+
+  getAllOrders,
+
+  updateOrderStatus,
+
+  deleteOrder,
+} from "../controllers/orderController.js";
+
+import {
+  protect,
+  admin,
+} from "../middlewares/authMiddleware.js";
+
+
+// ==========================================
+// USER ROUTES
+// ==========================================
+
+
+// CREATE ORDER
+router.post("/", protect, createOrder);
+
+
+// GET LOGGED IN USER ORDERS
+router.get("/myorders", protect, getMyOrders);
+
+
+// GET SINGLE ORDER
+router.get("/:id", protect, getOrderById);
+
+
+// UPDATE ORDER PAYMENT STATUS
+router.put("/:id/pay", protect, updateOrderToPaid);
+
+
+// CANCEL ORDER
+router.put("/:id/cancel", protect, cancelOrder);
+
+
+
+// ==========================================
+// ADMIN ROUTES
+// ==========================================
+
+
+// GET ALL ORDERS
+router.get("/", protect, admin, getAllOrders);
+
+
+// UPDATE ORDER STATUS
+router.put(
+  "/:id/status",
+  protect,
+  admin,
+  updateOrderStatus
+);
+
+
+// MARK AS DELIVERED
+router.put(
+  "/:id/deliver",
+  protect,
+  admin,
+  updateOrderToDelivered
+);
+
+
+// DELETE ORDER
+router.delete(
+  "/:id",
+  protect,
+  admin,
+  deleteOrder
+);
+
 
 export default router;
